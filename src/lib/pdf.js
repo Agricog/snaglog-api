@@ -72,6 +72,13 @@ function generateReportHTML(report) {
     `).join('')}
   `).join('');
 
+  const notesSection = report.notes ? `
+    <div class="notes-section">
+      <h2>Additional Notes</h2>
+      <div class="notes-content">${escapeHtml(report.notes)}</div>
+    </div>
+  ` : '';
+
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -111,6 +118,9 @@ function generateReportHTML(report) {
     .summary-table th, .summary-table td { padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0; }
     .summary-table th { background: #1e293b; color: white; font-weight: bold; }
     .summary-table tr:nth-child(even) { background: #f8fafc; }
+    .notes-section { margin-top: 30px; padding: 20px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; }
+    .notes-section h2 { margin-top: 0; margin-bottom: 12px; }
+    .notes-content { color: #475569; white-space: pre-wrap; line-height: 1.6; }
     .footer-cta { text-align: center; margin-top: 40px; padding-top: 30px; border-top: 1px solid #e2e8f0; }
     .cta-text { font-size: 16px; color: #EA580C; font-weight: bold; margin-bottom: 5px; }
     .cta-url { font-size: 22px; color: #1e293b; font-weight: bold; }
@@ -162,6 +172,7 @@ function generateReportHTML(report) {
   <div class="page">
     <h1>Detailed Snag List</h1>
     ${snagSections}
+    ${notesSection}
   </div>
 
   <div class="footer-cta">

@@ -9,14 +9,21 @@ const router = express.Router();
 // Configure multer for memory storage
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB per file
-    files: 100, // Max 100 files
-  },
+  limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
+    const allowedTypes = [
+      'image/jpeg',
+      'image/jpg', 
+      'image/png',
+      'image/webp',
+      'image/heic',
+      'image/heif',
+      'application/octet-stream'
+    ];
+    if (file.mimetype.startsWith('image/') || allowedTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
+      console.log('Rejected file type:', file.mimetype);
       cb(new Error('Only image files are allowed'));
     }
   },

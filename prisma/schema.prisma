@@ -1,0 +1,62 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Report {
+  id              String   @id @default(uuid())
+  userId          String
+  propertyAddress String
+  propertyType    String?
+  developerName   String?
+  inspectionDate  DateTime @default(now())
+  status          Status   @default(DRAFT)
+  paymentStatus   PaymentStatus @default(UNPAID)
+  stripePaymentId String?
+  pdfUrl          String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  snags           Snag[]
+}
+
+model Snag {
+  id             String   @id @default(uuid())
+  reportId       String
+  report         Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  photoUrl       String
+  room           String?
+  defectType     String?
+  description    String?
+  severity       Severity @default(MINOR)
+  suggestedTrade String?
+  remedialAction String?
+  aiConfidence   Float?
+  userEdited     Boolean  @default(false)
+  displayOrder   Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+enum Status {
+  DRAFT
+  ANALYZING
+  REVIEW
+  GENERATING
+  COMPLETE
+}
+
+enum PaymentStatus {
+  UNPAID
+  PAID
+  DEMO
+}
+
+enum Severity {
+  MINOR
+  MODERATE
+  MAJOR
+}

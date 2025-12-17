@@ -30,16 +30,10 @@ const upload = multer({
   },
 });
 
-// Convert HEIC/HEIF to JPEG
 async function processImage(buffer, mimetype) {
-  const isHeic = mimetype === 'image/heic' || 
-                 mimetype === 'image/heif' || 
-                 mimetype === 'application/octet-stream';
-  
   try {
-    // Convert to JPEG (handles HEIC and normalizes all formats)
     const processed = await sharp(buffer)
-      .rotate() // Auto-rotate based on EXIF
+      .rotate()
       .jpeg({ quality: 85 })
       .toBuffer();
     
@@ -50,7 +44,6 @@ async function processImage(buffer, mimetype) {
     };
   } catch (error) {
     console.error('Image processing error:', error.message);
-    // If sharp fails, return original (might work for some formats)
     const ext = mimetype.split('/')[1] || 'jpg';
     return {
       buffer,
@@ -60,7 +53,6 @@ async function processImage(buffer, mimetype) {
   }
 }
 
-// POST / - Create report and upload photos
 router.post('/', requireAuth(), upload.array('photos', 100), async (req, res) => {
   try {
     const { userId } = req.auth;
@@ -70,7 +62,6 @@ router.post('/', requireAuth(), upload.array('photos', 100), async (req, res) =>
       return res.status(400).json({ error: 'Property address is required' });
     }
 
-    // Create report
     const report = await prisma.report.create({
       data: {
         userId,
@@ -83,12 +74,10 @@ router.post('/', requireAuth(), upload.array('photos', 100), async (req, res) =>
       },
     });
 
-    // Process and upload photos
     const snags = [];
     for (let i = 0; i < req.files.length; i++) {
       const file = req.files[i];
       
-      // Process image (converts HEIC to JPEG)
       const processed = await processImage(file.buffer, file.mimetype);
       
       const { publicUrl } = await uploadToR2(
@@ -115,7 +104,6 @@ router.post('/', requireAuth(), upload.array('photos', 100), async (req, res) =>
   }
 });
 
-// POST /:reportId/photos - Add more photos to existing report
 router.post('/:reportId/photos', requireAuth(), upload.array('photos', 100), async (req, res) => {
   try {
     const { userId } = req.auth;
@@ -136,7 +124,6 @@ router.post('/:reportId/photos', requireAuth(), upload.array('photos', 100), asy
     for (let i = 0; i < req.files.length; i++) {
       const file = req.files[i];
       
-      // Process image (converts HEIC to JPEG)
       const processed = await processImage(file.buffer, file.mimetype);
       
       const { publicUrl } = await uploadToR2(

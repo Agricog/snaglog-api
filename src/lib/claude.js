@@ -5,59 +5,82 @@ const anthropic = new Anthropic({
 });
 
 export async function analyzeSnagPhoto(imageUrl) {
-  const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: 1024,
-    messages: [
-      {
-        role: 'user',
-        content: [
-          {
-            type: 'image',
-            source: {
-              type: 'url',
-              url: imageUrl,
-            },
-          },
-          {
-            type: 'text',
-            text: `You are an expert UK building inspector analyzing a photo of a defect in a new build property.
-
-Analyze this image and provide a JSON response with the following fields:
-- defectType: Brief category (e.g., "Paint defect", "Joinery issue", "Plumbing problem", "Electrical issue", "Tiling defect", "Plastering issue", "Window/door issue", "Flooring defect", "Sealant issue", "Fitting damage")
-- description: Clear, professional description of the defect (2-3 sentences max)
-- severity: One of "MINOR", "MODERATE", or "MAJOR"
-- suggestedTrade: The trade responsible (e.g., "Decorator", "Joiner", "Plumber", "Electrician", "Tiler", "Plasterer", "Builder")
-- remedialAction: Brief recommended fix (1 sentence)
-- confidence: Your confidence level 0.0 to 1.0
-
-If the image does not show a clear defect, still provide your best assessment.
-
-Respond ONLY with valid JSON, no other text.`,
-          },
-        ],
-      },
-    ],
-  });
-
   try {
-    const text = response.content[0].text;
+    // Fetch the image from R2
+    const response = await fetch(imageUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch image: ${response.status}`);
+    }
+    
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const base64Data = buffer.toString('base64');
+    
+    // Determine media type from URL or default to jpeg
+    let mediaType = 'image/jpeg';
+    if (imageUrl.includes('.png')) mediaType = 'image/png';
+    else if (imageUrl.includes('.webp')) mediaType = 'image/webp';
+    else if (imageUrl.includes('.gif')) mediaType = 'image/gif';
+
+    const message = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1024,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type: mediaType,
+                data: base64Data,
+              },
+            },
+            {
+              type: 'text',
+              text: `You are a UK building inspector analyzing a photo of a defect in a new build property.
+
+Analyze this image and provide:
+1. defectType - Brief name of the defect (e.g., "Paint scuff", "Cracked tile", "Gap in sealant")
+2. description - One sentence describing the issue
+3. severity - One of: MINOR, MODERATE, or MAJOR
+4. suggestedTrade - Which trade should fix this (e.g., "Decorator", "Tiler", "Plumber", "Electrician", "Joiner", "Plasterer")
+5. remedialAction - Brief description of how to fix it
+6. confidence - Your confidence in this assessment from 0.0 to 1.0
+
+Respond ONLY with valid JSON in this exact format:
+{
+  "defectType": "string",
+  "description": "string", 
+  "severity": "MINOR|MODERATE|MAJOR",
+  "suggestedTrade": "string",
+  "remedialAction": "string",
+  "confidence": 0.0
+}`,
+            },
+          ],
+        },
+      ],
+    });
+
+    const text = message.content[0].text;
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       return JSON.parse(jsonMatch[0]);
     }
-    throw new Error('No JSON found in response');
+    throw new Error('No valid JSON in response');
   } catch (error) {
-    console.error('Error parsing Claude response:', error);
+    console.error('Claude analysis error:', error.message);
     return {
       defectType: 'Unidentified defect',
-      description: 'Unable to analyze this image. Please review manually.',
+      description: 'Unable to analyze image automatically',
       severity: 'MINOR',
-      suggestedTrade: 'Builder',
+      suggestedTrade: 'General',
       remedialAction: 'Manual inspection required',
-      confidence: 0.0,
+      confidence: 0,
     };
   }
 }
 
-export default anthropic;
+export default { analyzeSnagPhoto };

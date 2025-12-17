@@ -8,7 +8,6 @@ const router = express.Router();
 router.get('/', requireAuth(), async (req, res) => {
   try {
     const userId = req.auth.userId;
-
     const reports = await prisma.report.findMany({
       where: { userId },
       include: {
@@ -60,7 +59,8 @@ router.get('/:reportId', requireAuth(), async (req, res) => {
       return res.status(404).json({ error: 'Report not found' });
     }
 
-    res.json({ report });
+    // Return report directly, not wrapped
+    res.json(report);
   } catch (error) {
     console.error('Get report error:', error);
     res.status(500).json({ error: 'Failed to get report' });
@@ -72,9 +72,8 @@ router.patch('/:reportId', requireAuth(), async (req, res) => {
   try {
     const userId = req.auth.userId;
     const { reportId } = req.params;
-    const { propertyAddress, propertyType, developerName, inspectionDate } = req.body;
+    const { propertyAddress, propertyType, developerName, notes, inspectionDate } = req.body;
 
-    // Verify ownership
     const existing = await prisma.report.findFirst({
       where: { id: reportId, userId },
     });
@@ -94,7 +93,7 @@ router.patch('/:reportId', requireAuth(), async (req, res) => {
       },
     });
 
-    res.json({ success: true, report });
+    res.json(report);
   } catch (error) {
     console.error('Update report error:', error);
     res.status(500).json({ error: 'Failed to update report' });
@@ -108,7 +107,6 @@ router.patch('/:reportId/snag/:snagId', requireAuth(), async (req, res) => {
     const { reportId, snagId } = req.params;
     const { room, defectType, description, severity, suggestedTrade, remedialAction } = req.body;
 
-    // Verify ownership
     const report = await prisma.report.findFirst({
       where: { id: reportId, userId },
     });
@@ -130,7 +128,7 @@ router.patch('/:reportId/snag/:snagId', requireAuth(), async (req, res) => {
       },
     });
 
-    res.json({ success: true, snag });
+    res.json(snag);
   } catch (error) {
     console.error('Update snag error:', error);
     res.status(500).json({ error: 'Failed to update snag' });
@@ -143,7 +141,6 @@ router.delete('/:reportId/snag/:snagId', requireAuth(), async (req, res) => {
     const userId = req.auth.userId;
     const { reportId, snagId } = req.params;
 
-    // Verify ownership
     const report = await prisma.report.findFirst({
       where: { id: reportId, userId },
     });
@@ -169,7 +166,6 @@ router.delete('/:reportId', requireAuth(), async (req, res) => {
     const userId = req.auth.userId;
     const { reportId } = req.params;
 
-    // Verify ownership
     const report = await prisma.report.findFirst({
       where: { id: reportId, userId },
     });
@@ -178,7 +174,6 @@ router.delete('/:reportId', requireAuth(), async (req, res) => {
       return res.status(404).json({ error: 'Report not found' });
     }
 
-    // Cascade delete will remove snags
     await prisma.report.delete({
       where: { id: reportId },
     });

@@ -89,6 +89,7 @@ router.patch('/:reportId', requireAuth(), async (req, res) => {
         ...(propertyAddress && { propertyAddress }),
         ...(propertyType && { propertyType }),
         ...(developerName !== undefined && { developerName }),
+        ...(notes !== undefined && { notes }),
         ...(inspectionDate && { inspectionDate: new Date(inspectionDate) }),
       },
     });
